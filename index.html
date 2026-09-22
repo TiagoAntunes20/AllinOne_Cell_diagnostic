@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>All In One Assistech Diagnostico de Celular</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="shortcut icon" href="All-in-One-Icon.ico" type="image/x-icon">
+</head>
+<body>
+
+<!-- TELA 1 — INÍCIO -->
+<section id="screen-start" class="screen screen--light is-active">
+  <header class="brandbar">
+    <span class="brandbar__mark"></span>
+    <span class="brandbar__name">All In One Assistech Diagnostico de Celulares</span>
+  </header>
+
+  <div class="hero">
+    <p class="hero__eyebrow">Diagnóstico de smartphones</p>
+    <h1 class="hero__title">All in One Assistech</h1>
+    <p class="hero__subtitle">
+      Suíte de testes para conferir o funcionamento do aparelho
+      antes da entrega ao cliente.
+    </p>
+
+    <button id="btn-start" class="btn btn--primary btn--lg">
+      Iniciar teste
+    </button>
+  </div>
+
+  <footer class="foot">Bancada de diagnóstico</footer>
+</section>
+
+<!-- TELA 2 — QR CODE -->
+<section id="screen-qr" class="screen screen--dark">
+  <header class="brandbar brandbar--dark">
+    <span class="brandbar__mark"></span>
+    <span class="brandbar__name">All In One Assistech Diagnostico de Celular</span>
+  </header>
+
+  <div class="qrwrap">
+    <p class="qrwrap__eyebrow">Teste de Tela</p>
+    <h1 class="qrwrap__title">Escaneie o QR Code com o celular</h1>
+
+    <div class="qrcard">
+      <canvas id="qr-canvas" width="280" height="280"></canvas>
+    </div>
+
+    <p class="qrwrap__session">/teste/<span id="session-code">------</span></p>
+
+    <p class="qrwrap__status">
+      <span class="pulse-dot"></span>
+      Aguardando conexão do celular...
+    </p>
+
+    <button id="btn-cancel" class="btn btn--ghost">Cancelar</button>
+  </div>
+</section>
+
+<script src="vendor.qrcode.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
