@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Teste de Câmera — All In One Assistech</title>
+<link rel="icon" type="image/png" href="logo.png">
+<style>
+  :root{
+    --bg: #0a0b0d;
+    --panel: #141619;
+    --line: #24272c;
+    --text: #e8eaed;
+    --text-dim: #7d8590;
+    --accent: #00e0a4;
+    --accent-dim: #063d30;
+    --orange: #E85D1A;
+    --warn: #ff5c5c;
+  }
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body{
+    margin: 0; padding: 0; height: 100%; overflow: hidden;
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    user-select: none;
+  }
+  #app{ position: relative; height: 100dvh; width: 100%; }
+
+  video{
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    background: #000;
+  }
+  video.mirror{ transform: scaleX(-1); }
+
+  .hud{ position: absolute; z-index: 2; }
+
+  #backLink{
+    top: max(10px, env(safe-area-inset-top));
+    left: 10px;
+    background: rgba(20,22,25,0.72);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 11px; color: var(--text-dim);
+    text-decoration: none;
+  }
+
+  #label{
+    top: max(10px, env(safe-area-inset-top));
+    left: 50%; transform: translateX(-50%);
+    background: rgba(20,22,25,0.72);
+    backdrop-filter: blur(6px);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 12px; font-weight: 700;
+  }
+
+  #flipBtn{
+    top: max(10px, env(safe-area-inset-top));
+    right: 10px;
+    background: rgba(20,22,25,0.72);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    color: var(--text);
+    appearance: none; cursor: pointer;
+  }
+
+  #idleMsg, #errorBox{
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 30px;
+    gap: 14px;
+  }
+  #idleMsg.show, #errorBox.show{ display: flex; }
+  #errorBox p{ color: var(--warn); font-size: 14px; max-width: 280px; line-height: 1.5; }
+  #idleMsg p{ color: var(--text-dim); font-size: 14px; max-width: 280px; }
+
+  button.action{
+    appearance: none; border: none; cursor: pointer;
+    font-family: inherit; font-weight: 700;
+    border-radius: 10px;
+    background: var(--orange); color: #fff;
+    font-size: 15px; padding: 14px 30px;
+  }
+
+  .controls{
+    bottom: max(16px, env(safe-area-inset-bottom));
+    left: 0; right: 0;
+    display: flex; justify-content: center; gap: 12px;
+  }
+  .controls button{
+    appearance: none; border: none; cursor: pointer;
+    font-family: inherit; font-weight: 700;
+    font-size: 14px; padding: 14px 22px;
+    border-radius: 999px;
+  }
+  #okBtn{ background: var(--accent); color: #06231a; }
+  #failBtn{ background: rgba(20,22,25,0.85); color: var(--warn); border: 1px solid #4a2222; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <video id="video" autoplay playsinline muted></video>
+
+  <a id="backLink" class="hud" href="menu.html">← Menu</a>
+  <div id="label" class="hud"></div>
+  <button id="flipBtn" class="hud" title="Trocar câmera">🔄</button>
+
+  <div id="idleMsg" class="hud">
+    <p>Toque para pedir acesso à câmera.</p>
+    <button class="action" id="startBtn">▶ Iniciar câmera</button>
+  </div>
+
+  <div id="errorBox" class="hud">
+    <p id="errorText"></p>
+    <button class="action" id="retryBtn">Tentar de novo</button>
+  </div>
+
+  <div class="hud controls" id="controls" style="display:none;">
+    <button id="okBtn">✓ Funcionando</button>
+    <button id="failBtn">✗ Com problema</button>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  const sessionCode = new URLSearchParams(window.location.search).get('session');
+  const params = new URLSearchParams(window.location.search);
+  let facing = params.get('facing') === 'user' ? 'user' : 'environment';
+
+  const video = document.getElementById('video');
+  const backLink = document.getElementById('backLink');
+  const label = document.getElementById('label');
+  const flipBtn = document.getElementById('flipBtn');
+  const idleMsg = document.getElementById('idleMsg');
+  const errorBox = document.getElementById('errorBox');
+  const errorText = document.getElementById('errorText');
+  const startBtn = document.getElementById('startBtn');
+  const retryBtn = document.getElementById('retryBtn');
+  const controls = document.getElementById('controls');
+  const okBtn = document.getElementById('okBtn');
+  const failBtn = document.getElementById('failBtn');
+
+  let stream = null;
+
+  function testId() {
+    return facing === 'user' ? 'cam-front' : 'cam-back';
+  }
+
+  function updateLabel() {
+    label.textContent = facing === 'user' ? 'Câmera Frontal' : 'Câmera Traseira';
+    video.classList.toggle('mirror', facing === 'user');
+  }
+
+  function updateBackLink() {
+    if (sessionCode) {
+      backLink.href = new URL(`menu.html?session=${sessionCode}`, window.location.href).href;
+    }
+  }
+
+  function stopStream() {
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      stream = null;
+    }
+  }
+
+  async function startCamera() {
+    idleMsg.classList.remove('show');
+    errorBox.classList.remove('show');
+    stopStream();
+
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: facing } },
+        audio: false
+      });
+    } catch (err) {
+      showError(err);
+      return;
+    }
+
+    video.srcObject = stream;
+    controls.style.display = 'flex';
+  }
+
+  function showError(err) {
+    controls.style.display = 'none';
+    let msg;
+    if (err.name === 'NotAllowedError') {
+      msg = 'Permissão negada. Libere o acesso à câmera no ícone ao lado da URL e tente de novo.';
+    } else if (err.name === 'NotFoundError') {
+      msg = 'Nenhuma câmera encontrada nesse aparelho para essa posição.';
+    } else if (err.name === 'NotReadableError') {
+      msg = 'A câmera não respondeu — pode estar sendo usada por outro app, ou com problema de hardware.';
+    } else {
+      msg = 'Não foi possível acessar a câmera (' + err.name + ').';
+    }
+    errorText.textContent = msg;
+    errorBox.classList.add('show');
+  }
+
+  function saveResult(status) {
+    if (!sessionCode) return;
+    const key = 'aio-diag-' + sessionCode;
+    let results = {};
+    try { results = JSON.parse(sessionStorage.getItem(key) || '{}'); } catch {}
+    results[testId()] = status;
+    sessionStorage.setItem(key, JSON.stringify(results));
+  }
+
+  function finish(status) {
+    saveResult(status);
+    stopStream();
+    if (sessionCode) {
+      window.location.href = new URL(`menu.html?session=${sessionCode}`, window.location.href).href;
+    } else {
+      controls.style.display = 'none';
+      idleMsg.classList.add('show');
+    }
+  }
+
+  flipBtn.addEventListener('click', () => {
+    facing = facing === 'user' ? 'environment' : 'user';
+    updateLabel();
+    startCamera();
+  });
+
+  startBtn.addEventListener('click', startCamera);
+  retryBtn.addEventListener('click', startCamera);
+  okBtn.addEventListener('click', () => finish('ok'));
+  failBtn.addEventListener('click', () => finish('fail'));
+
+  window.addEventListener('pagehide', stopStream);
+
+  updateLabel();
+  updateBackLink();
+  idleMsg.classList.add('show');
+})();
+</script>
+</body>
+</html>
