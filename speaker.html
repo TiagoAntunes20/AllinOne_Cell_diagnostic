@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Teste de Alto-falante — All In One Assistech</title>
+<link rel="icon" type="image/png" href="All-in-One-Icon.ico">
+<style>
+  :root{
+    --bg: #0a0b0d;
+    --panel: #141619;
+    --line: #24272c;
+    --text: #e8eaed;
+    --text-dim: #7d8590;
+    --accent: #00e0a4;
+    --accent-dim: #063d30;
+    --orange: #E85D1A;
+    --warn: #ff5c5c;
+  }
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body{
+    margin: 0; padding: 0; height: 100%; overflow: hidden;
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    user-select: none;
+  }
+  #app{
+    position: relative;
+    height: 100dvh; width: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 24px;
+  }
+
+  #backLink{
+    position: absolute; z-index: 2;
+    top: max(10px, env(safe-area-inset-top));
+    left: 10px;
+    background: rgba(20,22,25,0.72);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 11px; color: var(--text-dim);
+    text-decoration: none;
+  }
+
+  .stage-label{
+    font-size: 13px; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 10px;
+    min-height: 16px;
+  }
+
+  .channel-viz{
+    display: flex; gap: 28px; align-items: center; justify-content: center;
+    margin-bottom: 30px;
+    height: 90px;
+  }
+  .ch{
+    width: 64px; height: 64px; border-radius: 50%;
+    border: 2px solid var(--line);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: var(--text-dim);
+    transition: border-color 0.15s, box-shadow 0.15s, color 0.15s;
+  }
+  .ch.active{
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 0 8px var(--accent-dim);
+  }
+
+  h1{ font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  p.sub{ font-size: 14px; color: var(--text-dim); max-width: 300px; margin-bottom: 34px; line-height: 1.5; }
+
+  button{
+    appearance: none; border: none; cursor: pointer;
+    font-family: inherit; font-weight: 700;
+    border-radius: 10px;
+  }
+  #playBtn{
+    background: var(--orange); color: #fff;
+    font-size: 16px;
+    padding: 18px 44px;
+  }
+  #playBtn:active{ opacity: 0.85; }
+  #playBtn:disabled{ background: var(--panel); color: var(--text-dim); }
+
+  .confirm{
+    display: none;
+    flex-direction: column; align-items: center; gap: 14px;
+  }
+  .confirm.show{ display: flex; }
+  .confirm p{ font-size: 15px; margin-bottom: 4px; }
+  .confirm-row{ display: flex; gap: 12px; }
+  .confirm-row button{ font-size: 14px; padding: 14px 22px; }
+  #okBtn{ background: var(--accent); color: #06231a; }
+  #failBtn{ background: transparent; color: var(--warn); border: 1px solid #4a2222; }
+
+  #main.hidden{ display: none; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <a id="backLink" href="menu.html">← Menu</a>
+
+  <div id="main">
+    <div class="stage-label" id="stageLabel">Toque para iniciar</div>
+
+    <div class="channel-viz">
+      <div class="ch" id="chL">ESQ</div>
+      <div class="ch" id="chR">DIR</div>
+    </div>
+
+    <h1>Teste de Alto-falante</h1>
+    <p class="sub">Toca um tom no canal esquerdo, depois no direito, e por
+      último uma varredura de grave a agudo. Aumente o volume do aparelho
+      antes de começar.</p>
+
+    <button id="playBtn">▶ Iniciar teste</button>
+  </div>
+
+  <div class="confirm" id="confirm">
+    <p>O técnico ouviu claramente nos dois lados, sem chiado?</p>
+    <div class="confirm-row">
+      <button id="okBtn">✓ Funcionando</button>
+      <button id="failBtn">✗ Com problema</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  const sessionCode = new URLSearchParams(window.location.search).get('session');
+  const backLink = document.getElementById('backLink');
+  if (sessionCode) {
+    backLink.href = new URL(`menu.html?session=${sessionCode}`, window.location.href).href;
+  }
+
+  const main = document.getElementById('main');
+  const confirmBox = document.getElementById('confirm');
+  const stageLabel = document.getElementById('stageLabel');
+  const playBtn = document.getElementById('playBtn');
+  const chL = document.getElementById('chL');
+  const chR = document.getElementById('chR');
+  const okBtn = document.getElementById('okBtn');
+  const failBtn = document.getElementById('failBtn');
+
+  let ctx = null;
+
+  function playTone({ freqStart, freqEnd, pan, duration }) {
+    return new Promise(resolve => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freqStart, ctx.currentTime);
+      if (freqEnd && freqEnd !== freqStart) {
+        osc.frequency.exponentialRampToValueAtTime(freqEnd, ctx.currentTime + duration);
+      }
+
+      // Envelope simples pra evitar estalo no início/fim.
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.05);
+      gain.gain.setValueAtTime(0.5, ctx.currentTime + duration - 0.05);
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
+
+      if (panner) {
+        panner.pan.setValueAtTime(pan, ctx.currentTime);
+        osc.connect(gain).connect(panner).connect(ctx.destination);
+      } else {
+        osc.connect(gain).connect(ctx.destination);
+      }
+
+      osc.start();
+      osc.stop(ctx.currentTime + duration);
+      osc.onended = resolve;
+    });
+  }
+
+  function setActive(side) {
+    chL.classList.toggle('active', side === 'L' || side === 'both');
+    chR.classList.toggle('active', side === 'R' || side === 'both');
+  }
+
+  async function runSequence() {
+    playBtn.disabled = true;
+    playBtn.textContent = 'Tocando...';
+
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') await ctx.resume();
+
+    stageLabel.textContent = 'Canal esquerdo';
+    setActive('L');
+    await playTone({ freqStart: 1000, pan: -1, duration: 1.4 });
+
+    stageLabel.textContent = 'Canal direito';
+    setActive('R');
+    await playTone({ freqStart: 1000, pan: 1, duration: 1.4 });
+
+    stageLabel.textContent = 'Grave → agudo';
+    setActive('both');
+    await playTone({ freqStart: 200, freqEnd: 6000, pan: 0, duration: 2.2 });
+
+    setActive(null);
+    stageLabel.textContent = 'Teste concluído';
+    main.classList.add('hidden');
+    confirmBox.classList.add('show');
+  }
+
+  function saveResult(status) {
+    if (!sessionCode) return;
+    const key = 'aio-diag-' + sessionCode;
+    let results = {};
+    try { results = JSON.parse(sessionStorage.getItem(key) || '{}'); } catch {}
+    results.speaker = status;
+    sessionStorage.setItem(key, JSON.stringify(results));
+  }
+
+  function finish(status) {
+    saveResult(status);
+    if (sessionCode) {
+      window.location.href = new URL(`menu.html?session=${sessionCode}`, window.location.href).href;
+    } else {
+      // Sem sessão (aberto direto) — só reseta a tela pra testar de novo.
+      confirmBox.classList.remove('show');
+      main.classList.remove('hidden');
+      stageLabel.textContent = 'Toque para iniciar';
+      playBtn.disabled = false;
+      playBtn.textContent = '▶ Iniciar teste';
+    }
+  }
+
+  playBtn.addEventListener('click', runSequence);
+  okBtn.addEventListener('click', () => finish('ok'));
+  failBtn.addEventListener('click', () => finish('fail'));
+})();
+</script>
+</body>
+</html>
