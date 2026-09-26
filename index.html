@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diagnóstico AIO — All In One Assistech</title>
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- TELA 1 — NOVA OS / INÍCIO -->
+<section id="screen-start" class="screen screen--light is-active">
+  <header class="brandbar">
+    <img class="brandbar__logo" src="logo.png" alt="All In One Assistech">
+    <span class="brandbar__name">All In One Assistech</span>
+  </header>
+
+  <div class="hero">
+
+    <div id="os-form-wrap">
+      <p class="hero__eyebrow">Nova Ordem de Serviço</p>
+      <h1 class="hero__title">Diagnóstico AIO</h1>
+      <p class="hero__subtitle">
+        Preencha os dados do cliente e do aparelho antes de iniciar
+        os testes.
+      </p>
+
+      <form id="os-form" class="os-form">
+        <label>Nome do cliente*
+          <input type="text" id="os-cliente" required>
+        </label>
+        <label>Telefone
+          <input type="tel" id="os-telefone" placeholder="(00) 00000-0000">
+        </label>
+        <label>Aparelho (marca/modelo)
+          <input type="text" id="os-aparelho" placeholder="ex: Samsung A54">
+        </label>
+        <label>Defeito relatado*
+          <textarea id="os-defeito" rows="2" required></textarea>
+        </label>
+        <label>Acessórios entregues
+          <input type="text" id="os-acessorios" placeholder="ex: carregador, capinha">
+        </label>
+
+        <button type="submit" class="btn btn--primary btn--lg">Criar OS</button>
+      </form>
+    </div>
+
+    <div id="os-ready-wrap" style="display:none;">
+      <p class="hero__eyebrow">OS criada</p>
+      <h1 class="hero__title" id="os-ready-name">—</h1>
+      <p class="hero__subtitle" id="os-ready-sub"></p>
+
+      <button id="btn-start" class="btn btn--primary btn--lg">▶ Iniciar Teste</button>
+    </div>
+
+  </div>
+
+  <footer class="foot">Bancada de diagnóstico</footer>
+</section>
+
+<!-- TELA 2 — QR CODE -->
+<section id="screen-qr" class="screen screen--dark">
+  <header class="brandbar brandbar--dark">
+    <img class="brandbar__logo" src="logo.png" alt="All In One Assistech">
+    <span class="brandbar__name">All In One Assistech</span>
+  </header>
+
+  <div class="qrwrap">
+    <p class="qrwrap__eyebrow">Teste de diagnóstico</p>
+    <h1 class="qrwrap__title">Escaneie o QR Code com o celular</h1>
+
+    <div class="qrcard">
+      <canvas id="qr-canvas" width="280" height="280"></canvas>
+    </div>
+
+    <p class="qrwrap__session">/teste/<span id="session-code">------</span></p>
+
+    <p class="qrwrap__status">
+      <span class="pulse-dot"></span>
+      Aguardando conexão do celular...
+    </p>
+
+    <button id="btn-cancel" class="btn btn--ghost">Cancelar</button>
+  </div>
+</section>
+
+<!-- TELA 3 — RESULTADO -->
+<section id="screen-result" class="screen screen--light">
+  <header class="brandbar">
+    <img class="brandbar__logo" src="logo.png" alt="All In One Assistech">
+    <span class="brandbar__name">All In One Assistech</span>
+  </header>
+
+  <div class="resultwrap">
+    <p class="resultwrap__eyebrow">Teste concluído</p>
+    <h1 class="resultwrap__title">Resultado do aparelho</h1>
+    <p class="resultwrap__client" id="result-client">—</p>
+
+    <div class="result-list" id="result-list"></div>
+
+    <button id="btn-finish" class="btn btn--primary btn--lg">📄 Finalizar aparelho</button>
+  </div>
+</section>
+
+<script src="vendor.qrcode.js"></script>
+<script src="vendor.mqtt.js"></script>
+<script src="vendor.docx.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
