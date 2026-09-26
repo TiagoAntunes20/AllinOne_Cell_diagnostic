@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Teste de Bluetooth — All In One Assistech</title>
+<link rel="icon" type="image/png" href="logo.png">
+<style>
+  :root{
+    --bg:#0a0b0d; --panel:#141619; --line:#24272c;
+    --text:#e8eaed; --text-dim:#7d8590;
+    --accent:#00e0a4; --accent-dim:#063d30;
+    --orange:#E85D1A; --warn:#ff5c5c;
+  }
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body{
+    margin:0; padding:0; height:100%; overflow:hidden;
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  #app{
+    position:relative; height:100dvh; width:100%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:24px;
+  }
+  #backLink{
+    position:absolute; z-index:2; top:max(10px, env(safe-area-inset-top)); left:10px;
+    background:rgba(20,22,25,0.72); border:1px solid var(--line); border-radius:999px;
+    padding:6px 12px; font-size:11px; color:var(--text-dim); text-decoration:none;
+  }
+  .ring{
+    width:120px; height:120px; border-radius:50%;
+    border:3px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    font-size:38px; margin-bottom:22px;
+  }
+  .ring.found{ border-color: var(--accent); }
+  h1{ font-size:20px; font-weight:700; margin-bottom:6px; }
+  p.sub{ font-size:14px; color:var(--text-dim); max-width:320px; margin-bottom:24px; line-height:1.5; }
+  .result{ font-size:15px; margin-bottom:22px; min-height: 20px; }
+  .result.ok{ color: var(--accent); }
+  .result.warn{ color: var(--warn); }
+  button.scan{
+    appearance:none; border:none; cursor:pointer; font-family:inherit; font-weight:700;
+    background:var(--orange); color:#fff; font-size:15px; padding:16px 34px; border-radius:10px;
+    margin-bottom: 26px;
+  }
+  .confirm-row{ display:flex; gap:12px; }
+  button.act{ appearance:none; border:none; cursor:pointer; font-family:inherit; font-weight:700; border-radius:999px; font-size:14px; padding:14px 22px; }
+  #okBtn{ background:var(--accent); color:#06231a; }
+  #failBtn{ background:transparent; color:var(--warn); border:1px solid #4a2222; }
+</style>
+</head>
+<body>
+<div id="app">
+  <a id="backLink" href="menu.html">← Menu</a>
+
+  <div class="ring" id="ring">📡</div>
+  <h1>Teste de Bluetooth</h1>
+  <p class="sub" id="instruction">Toque em buscar e escolha qualquer aparelho próximo com Bluetooth ativo (fone, outro celular, etc). Se a lista aparecer, o rádio Bluetooth está funcionando.</p>
+
+  <button class="scan" id="scanBtn">🔍 Procurar dispositivos</button>
+  <div class="result" id="result"></div>
+
+  <div class="confirm-row">
+    <button class="act" id="okBtn">✓ Funcionando</button>
+    <button class="act" id="failBtn">✗ Com problema</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  const sessionCode = new URLSearchParams(window.location.search).get('session');
+  const backLink = document.getElementById('backLink');
+  if (sessionCode) backLink.href = new URL(`menu.html?session=${sessionCode}`, window.location.href).href;
+
+  const ring = document.getElementById('ring');
+  const result = document.getElementById('result');
+  const scanBtn = document.getElementById('scanBtn');
+
+  if (!navigator.bluetooth) {
+    result.textContent = 'Este navegador não suporta busca de Bluetooth (comum no Safari/iOS e Firefox). Confirme manualmente pelas configurações do aparelho.';
+    result.classList.add('warn');
+    scanBtn.disabled = true;
+    scanBtn.style.opacity = '0.4';
+  }
+
+  scanBtn.addEventListener('click', async () => {
+    result.textContent = '';
+    result.className = 'result';
+    try {
+      const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
+      ring.classList.add('found');
+      ring.textContent = '✅';
+      result.textContent = 'Encontrado: ' + (device.name || 'dispositivo sem nome');
+      result.classList.add('ok');
+    } catch (err) {
+      result.textContent = err.name === 'NotFoundError'
+        ? 'Nenhum dispositivo selecionado. Tente de novo ou confirme manualmente abaixo.'
+        : 'Erro ao buscar (' + err.name + ').';
+      result.classList.add('warn');
+    }
+  });
+
+  function saveResult(status) {
+    if (!sessionCode) return;
+    const key = 'aio-diag-' + sessionCode;
+    let results = {};
+    try { results = JSON.parse(sessionStorage.getItem(key) || '{}'); } catch {}
+    results.bluetooth = status;
+    sessionStorage.setItem(key, JSON.stringify(results));
+  }
+
+  function finish(status) {
+    saveResult(status);
+    if (sessionCode) {
+      window.location.href = new URL(`menu.html?session=${sessionCode}`, window.location.href).href;
+    }
+  }
+
+  document.getElementById('okBtn').addEventListener('click', () => finish('ok'));
+  document.getElementById('failBtn').addEventListener('click', () => finish('fail'));
+})();
+</script>
+</body>
+</html>
